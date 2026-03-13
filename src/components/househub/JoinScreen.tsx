@@ -15,7 +15,8 @@ interface JoinScreenProps {
     purchases: Purchase[],
     log: ActivityLog[],
     rotation: RotationEntry[],
-    supplyResponsibilities: SupplyResponsibility[]
+    supplyResponsibilities: SupplyResponsibility[],
+    cleaningEnabled: boolean
   ) => void;
   onBack: () => void;
 }
@@ -34,6 +35,7 @@ const JoinScreen = ({ enterApp, onBack }: JoinScreenProps) => {
   const [dbCleanRecs,     setDbCleanRecs]     = useState<CleanRecord[]>([]);
   const [dbPurchases,     setDbPurchases]     = useState<Purchase[]>([]);
   const [dbSupplyResps,   setDbSupplyResps]   = useState<SupplyResponsibility[]>([]);
+  const [dbHouseSettings, setDbHouseSettings] = useState<any>(null);
 
   // ── Digit input handlers ───────────────────────────────────────────
   const handleDigit = (idx: number, val: string) => {
@@ -98,6 +100,7 @@ const JoinScreen = ({ enterApp, onBack }: JoinScreenProps) => {
       setDbCleanRecs(cleanRecs);
       setDbPurchases(purchases);
       setDbSupplyResps(supplyResps);
+      setDbHouseSettings(houseSettings);
 
       setStep("name");
 
@@ -127,7 +130,7 @@ const JoinScreen = ({ enterApp, onBack }: JoinScreenProps) => {
     );
 
     setTimeout(
-      () => enterApp(m, currentHouse, dbMembers, dbCleanRecs, dbPurchases, [], rotation, dbSupplyResps),
+      () => enterApp(m, currentHouse, dbMembers, dbCleanRecs, dbPurchases, [], rotation, dbSupplyResps, dbHouseSettings?.cleaning_enabled ?? true),
       450
     );
   };

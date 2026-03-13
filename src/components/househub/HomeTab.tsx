@@ -1,4 +1,4 @@
-import { Member, Purchase, ActivityLog, RotationEntry, CleanRecord, SUPPLIES, fmtDate } from "@/lib/househub";
+import { Member, Purchase, ActivityLog, RotationEntry, CleanRecord, Supply, fmtDate } from "@/lib/househub";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 interface HomeTabProps {
@@ -14,6 +14,8 @@ interface HomeTabProps {
   isMyTurnClean:   boolean;
   user:            Member | null;
   setTab:          (tab: string) => void;
+  cleaningEnabled:  boolean;
+  activeSupplies:   Supply[];
 }
 
 const HomeTab = ({
@@ -26,66 +28,70 @@ const HomeTab = ({
   isMyTurnClean,
   user,
   setTab,
+  cleaningEnabled,
+  activeSupplies,
 }: HomeTabProps) => {
   const lastPurchase  = purchases[0];
-  const mySupplyItems = SUPPLIES.filter(s => nextBuyerByItem[s.label]?.id === user?.id);
+  const mySupplyItems = activeSupplies.filter(s => nextBuyerByItem[s.label]?.id === user?.id);
   const isMyTurnBuy   = mySupplyItems.length > 0;
 
   return (
     <div className="flex flex-col gap-4">
 
       {/* Card 1 — Cleaning */}
-      <div
-        className={`group rounded-2xl border p-6 transition-all duration-300 cursor-pointer
-          hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]
-          ${isMyTurnClean
-            ? "bg-primary/5 border-primary/30 shadow-[0_0_0_3px_rgba(42,157,143,0.08)]"
-            : "bg-card border-border shadow-sm hover:border-primary/20"
-          }
-        `}
-        onClick={() => setTab("cleaning")}
-      >
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🧹</span>
-            <h2 className="text-xl font-bold font-display text-foreground">Cleaning</h2>
+      {cleaningEnabled && (
+        <div
+          className={`group rounded-2xl border p-6 transition-all duration-300 cursor-pointer
+            hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]
+            ${isMyTurnClean
+              ? "bg-primary/5 border-primary/30 shadow-[0_0_0_3px_rgba(42,157,143,0.08)]"
+              : "bg-card border-border shadow-sm hover:border-primary/20"
+            }
+          `}
+          onClick={() => setTab("cleaning")}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🧹</span>
+              <h2 className="text-xl font-bold font-display text-foreground">Cleaning</h2>
+            </div>
+            <ArrowRight
+              size={18}
+              className="text-muted-foreground/40 transition-all duration-300 group-hover:text-primary group-hover:translate-x-1 mt-0.5"
+            />
           </div>
-          <ArrowRight
-            size={18}
-            className="text-muted-foreground/40 transition-all duration-300 group-hover:text-primary group-hover:translate-x-1 mt-0.5"
-          />
-        </div>
 
-        <p className="text-sm font-medium text-muted-foreground">
-          Next:{" "}
-          <span className="text-foreground font-semibold">
-            {thisRotation
-              ? fmtDate(thisRotation.date, { weekday: "long", month: "short", day: "numeric" })
-              : "—"}
-          </span>
-        </p>
-        <p className="text-sm font-medium text-muted-foreground mt-0.5">
-          Responsible:{" "}
-          <span className="text-foreground font-semibold">{thisCleanMbr?.name ?? "—"}</span>
-        </p>
-
-        {lastCleanRec && lastCleanMbr && (
-          <p className="text-xs text-muted-foreground mt-1.5">
-            Last cleaned by{" "}
-            <span className="font-semibold">{lastCleanMbr.name}</span>
-            {" — "}{fmtDate(lastCleanRec.date, { month: "short", day: "numeric" })}
-          </p>
-        )}
-
-        {isMyTurnClean && (
-          <div className="mt-3 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-primary" />
-            <span className="text-xs font-bold text-primary">
-              Your turn to clean this week
+          <p className="text-sm font-medium text-muted-foreground">
+            Next:{" "}
+            <span className="text-foreground font-semibold">
+              {thisRotation
+                ? fmtDate(thisRotation.date, { weekday: "long", month: "short", day: "numeric" })
+                : "—"}
             </span>
-          </div>
-        )}
-      </div>
+          </p>
+          <p className="text-sm font-medium text-muted-foreground mt-0.5">
+            Responsible:{" "}
+            <span className="text-foreground font-semibold">{thisCleanMbr?.name ?? "—"}</span>
+          </p>
+
+          {lastCleanRec && lastCleanMbr && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Last cleaned by{" "}
+              <span className="font-semibold">{lastCleanMbr.name}</span>
+              {" — "}{fmtDate(lastCleanRec.date, { month: "short", day: "numeric" })}
+            </p>
+          )}
+
+          {isMyTurnClean && (
+            <div className="mt-3 flex items-center gap-1.5">
+              <Sparkles size={13} className="text-primary" />
+              <span className="text-xs font-bold text-primary">
+                Your turn to clean this week
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Card 2 — Supplies */}
       <div
@@ -111,7 +117,7 @@ const HomeTab = ({
 
         {/* Per-item next buyers */}
         <div className="flex flex-col gap-1.5 mb-2">
-          {SUPPLIES.map(s => {
+          {activeSupplies.map(s => {
             const buyer    = nextBuyerByItem[s.label];
             const isMyItem = buyer?.id === user?.id;
             return (

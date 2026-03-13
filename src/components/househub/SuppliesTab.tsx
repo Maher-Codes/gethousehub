@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Member, Purchase, Supply, SUPPLIES, fmtDate } from "@/lib/househub";
+import { Member, Purchase, Supply, fmtDate } from "@/lib/househub";
 import { CheckCircle2 } from "lucide-react";
 
 interface SuppliesTabProps {
@@ -10,6 +10,7 @@ interface SuppliesTabProps {
   getMember:       (id: string) => Member | undefined;
   nextBuyerByItem: Record<string, Member | null>;
   lastBoughtMap:   Record<string, Purchase>;
+  activeSupplies:  Supply[];
 }
 
 // Celebration messages per supply item
@@ -55,6 +56,7 @@ const SuppliesTab = ({
   getMember,
   nextBuyerByItem,
   lastBoughtMap,
+  activeSupplies,
 }: SuppliesTabProps) => {
   const [confirmingItem, setConfirmingItem]   = useState<string | null>(null);
   const [celebrationMap, setCelebrationMap]   = useState<Record<string, { emoji: string; msg: string } | null>>({});
@@ -84,7 +86,7 @@ const SuppliesTab = ({
           Next Buyer — Per Item
         </h3>
         <div className="flex flex-col gap-3">
-          {SUPPLIES.map(s => {
+          {activeSupplies.map(s => {
             const nextBuyer    = nextBuyerByItem[s.label];
             const isMyTurn     = nextBuyer?.id === user?.id;
             const isConfirming = confirmingItem === s.id;
@@ -199,7 +201,7 @@ const SuppliesTab = ({
           Last Bought
         </h3>
         <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-          {SUPPLIES.map(s => {
+          {activeSupplies.map(s => {
             const last  = lastBoughtMap[s.id];
             const buyer = last ? getMember(last.member_id) : null;
             return (

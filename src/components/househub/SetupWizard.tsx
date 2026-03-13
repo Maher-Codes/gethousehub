@@ -17,6 +17,7 @@ interface SetupWizardProps {
     log:         ActivityLog[],
     rotation:    RotationEntry[],
     supplyResps: SupplyResponsibility[],
+    cleaningEnabled: boolean,
   ) => void;
 }
 
@@ -41,7 +42,7 @@ const CLEANING_DAYS = [
   { value: 4, label: "Thursday"  },
 ];
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 const inputClass  = "w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-base font-medium focus:outline-none focus:border-primary transition-colors";
 const btnPrimary  = "w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-sm hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none";
 
@@ -59,7 +60,6 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
   const [cleaningEnabled,   setCleaningEnabled]   = useState(true);
   const [cleaningFrequency, setCleaningFrequency] = useState<"weekly"|"biweekly"|"monthly">("weekly");
   const [cleaningDay,       setCleaningDay]        = useState(6);
-  const [rotationType,      setRotationType]       = useState<"round_robin"|"free_for_all">("round_robin");
 
   const [resp, setResp] = useState<Record<string, { last: string; next: string }>>({});
 
@@ -168,13 +168,13 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
         cleaning_enabled:   cleaningEnabled,
         cleaning_frequency: cleaningFrequency,
         cleaning_day:       cleaningDay,
-        rotation_type:      rotationType,
+        rotation_type:      "round_robin",
       });
 
       realHouseRef.current   = newHouse as House;
       realMembersRef.current = insertedMembers;
       setCode(generatedCode);
-      setStep(7);
+      setStep(6);
     } catch (err: any) {
       console.error("Setup failed:", err);
       setError(err?.message || "Something went wrong. Please try again.");
@@ -207,7 +207,7 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
       return acc;
     }, []);
 
-    enterApp(selectedMember, house, members, initClean, initPurchases, [], rotation, initSupplyResps);
+    enterApp(selectedMember, house, members, initClean, initPurchases, [], rotation, initSupplyResps, cleaningEnabled);
   };
 
   const chooseMember = (m: Member) => { setChosen(m.id); setTimeout(() => buildAndEnter(m), 450); };
@@ -406,39 +406,9 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
           </div>
         )}
 
-        {/* ── STEP 5 — Rotation type ── */}
-        {step === 5 && (
-          <div className="flex flex-col gap-5 animate-fade-up">
-            <button className="w-fit text-sm font-bold text-muted-foreground hover:text-foreground" onClick={goBack}>← Back</button>
-            <div>
-              <p className="text-4xl mb-3">🔄</p>
-              <h2 className="font-display font-black text-2xl text-foreground mb-1">How should turns work?</h2>
-              <p className="text-muted-foreground text-sm">Choose how your house tracks who's responsible for buying supplies.</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              {[
-                { v: "round_robin",  emoji: "🔄", title: "Round robin", desc: "Everyone takes turns in a fixed order. Fair and predictable." },
-                { v: "free_for_all", emoji: "🤝", title: "Whoever needs it", desc: "No fixed order — anyone logs when they buy. Great for casual houses." },
-              ].map(opt => (
-                <button key={opt.v} onClick={() => setRotationType(opt.v as any)}
-                  className={`p-5 rounded-2xl border-2 text-left transition-all active:scale-[0.99] ${rotationType === opt.v ? "border-primary bg-primary/8 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl">{opt.emoji}</span>
-                    <div className="flex-1">
-                      <p className="font-bold text-foreground mb-1">{opt.title}</p>
-                      <p className="text-sm text-muted-foreground">{opt.desc}</p>
-                    </div>
-                    {rotationType === opt.v && <Check size={18} className="text-primary shrink-0 mt-0.5" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-            <button className={btnPrimary} onClick={goNext}>Continue <ChevronRight size={16} className="inline ml-1" /></button>
-          </div>
-        )}
 
-        {/* ── STEP 6 — Who bought what last? ── */}
-        {step === 6 && (
+        {/* ── STEP 5 — Who bought what last? ── */}
+        {step === 5 && (
           <div className="flex flex-col gap-5 animate-fade-up">
             <button className="w-fit text-sm font-bold text-muted-foreground hover:text-foreground" onClick={goBack}>← Back</button>
             <div>
@@ -473,8 +443,8 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
           </div>
         )}
 
-        {/* ── STEP 7 — House code ── */}
-        {step === 7 && (
+        {/* ── STEP 6 — House code ── */}
+        {step === 6 && (
           <div className="flex flex-col gap-4 text-center animate-fade-up">
             <div className="text-6xl" style={{ animation: "float 3s ease-in-out infinite" }}>🎉</div>
             <h2 className="font-display font-black text-2xl">Your house is ready!</h2>
@@ -492,15 +462,14 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
               <div className="flex flex-col gap-1.5 text-sm">
                 <p>🛒 <b>{selectedSupplies.length} shared items:</b> {selectedSupplies.map(s => `${s.icon} ${s.label}`).join(", ")}</p>
                 <p>🧹 <b>Cleaning:</b> {cleaningEnabled ? `${cleaningFrequency === "weekly" ? "Every week" : cleaningFrequency === "biweekly" ? "Every 2 weeks" : "Monthly"} on ${DAY_LABELS[cleaningDay]}s` : "Not scheduled"}</p>
-                <p>🔄 <b>Rotation:</b> {rotationType === "round_robin" ? "Round robin" : "Free for all"}</p>
               </div>
             </div>
-            <button className={btnPrimary} onClick={() => setStep(8)}>Who are you? →</button>
+            <button className={btnPrimary} onClick={() => setStep(7)}>Who are you? →</button>
           </div>
         )}
 
-        {/* ── STEP 8 — Select your name ── */}
-        {step === 8 && (
+        {/* ── STEP 7 — Select your name ── */}
+        {step === 7 && (
           <div className="flex flex-col gap-3 animate-fade-up">
             <div className="mb-1">
               <p className="text-4xl mb-3">👋</p>

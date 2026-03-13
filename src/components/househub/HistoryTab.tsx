@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Member, CleanRecord, Purchase, SUPPLIES, fmtDate } from "@/lib/househub";
+import { Member, CleanRecord, Purchase, Supply, fmtDate } from "@/lib/househub";
 import { ShoppingBag, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
 
 interface HistoryTabProps {
@@ -7,9 +7,10 @@ interface HistoryTabProps {
   members:   Member[];
   cleanRecs: CleanRecord[];
   purchases: Purchase[];
+  activeSupplies: Supply[];
 }
 
-const HistoryTab = ({ user, members, cleanRecs, purchases }: HistoryTabProps) => {
+const HistoryTab = ({ user, members, cleanRecs, purchases, activeSupplies }: HistoryTabProps) => {
   const [selectedMember, setSelectedMember] = useState<string>(user.id);
   const [showAllCleans,  setShowAllCleans]   = useState(false);
   const [showAllBuys,    setShowAllBuys]     = useState(false);
@@ -38,7 +39,7 @@ const HistoryTab = ({ user, members, cleanRecs, purchases }: HistoryTabProps) =>
   // Purchases breakdown by item
   const purchasesByItem = useMemo(() => {
     const map: Record<string, number> = {};
-    SUPPLIES.forEach(s => { map[s.label] = 0; });
+    activeSupplies.forEach(s => { map[s.label] = 0; });
     myPurchases.forEach(p => {
       if (map[p.item_name] !== undefined) map[p.item_name]++;
     });
@@ -122,7 +123,7 @@ const HistoryTab = ({ user, members, cleanRecs, purchases }: HistoryTabProps) =>
         {/* Per-item purchase breakdown */}
         {totalPurchases > 0 && (
           <div className="mt-3 rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-            {SUPPLIES.map((s, i) => (
+            {activeSupplies.map((s, i) => (
               <div
                 key={s.id}
                 className="flex items-center justify-between px-4 py-3 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors duration-200"
@@ -221,7 +222,7 @@ const HistoryTab = ({ user, members, cleanRecs, purchases }: HistoryTabProps) =>
           <>
             <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
               {visiblePurchases.map((p, i) => {
-                const sup     = SUPPLIES.find(s => s.label === p.item_name);
+                const sup     = activeSupplies.find(s => s.label === p.item_name);
                 const isFirst = i === 0;
                 const daysAgo = Math.floor((Date.now() - new Date(p.date).getTime()) / 86400000);
                 return (

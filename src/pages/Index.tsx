@@ -28,6 +28,7 @@ const Index = () => {
     log:                    ActivityLog[];
     rotation:               RotationEntry[];
     supplyResponsibilities: SupplyResponsibility[];
+    cleaningEnabled:        boolean;
   } | null>(null);
 
   // ── On mount: check for a saved session ───────────────────────────
@@ -57,11 +58,12 @@ const Index = () => {
         return;
       }
 
-      const [members, cleanRecs, purchases, supplyResps] = await Promise.all([
+      const [members, cleanRecs, purchases, supplyResps, houseSettings] = await Promise.all([
         houseService.getMembers(house.id),
         houseService.getCleanRecords(house.id),
         houseService.getPurchases(house.id),
         houseService.getSupplyResponsibilities(house.id),
+        houseService.getHouseSettings(house.id),
       ]);
 
       const member = members.find(m => m.id === memberId);
@@ -88,6 +90,7 @@ const Index = () => {
         log:                    [],
         rotation,
         supplyResponsibilities: supplyResps,
+        cleaningEnabled:        houseSettings?.cleaning_enabled ?? true,
       });
       setScreen("app");
 
@@ -119,6 +122,7 @@ const Index = () => {
     initLog:         ActivityLog[],
     initRotation:    RotationEntry[],
     initSupplyResps: SupplyResponsibility[] = [],
+    cleaningEnabled: boolean = true,
   ) => {
     // Persist session so refresh goes straight back to dashboard
     saveSession(houseData.house_code, member.id);
@@ -132,6 +136,7 @@ const Index = () => {
       log:                    initLog,
       rotation:               initRotation,
       supplyResponsibilities: initSupplyResps,
+      cleaningEnabled:        cleaningEnabled,
     });
     setScreen("app");
   }, []);
@@ -160,6 +165,7 @@ const Index = () => {
         initialLog={appData.log}
         initialRotation={appData.rotation}
         initialSupplyResponsibilities={appData.supplyResponsibilities}
+        initialCleaningEnabled={appData.cleaningEnabled}
         onLeaveHouse={leaveHouse}
       />
     );
