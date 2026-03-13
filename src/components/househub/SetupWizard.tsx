@@ -42,6 +42,14 @@ const CLEANING_DAYS = [
   { value: 4, label: "Thursday"  },
 ];
 
+const EMOJI_PICKER = [
+  { category: "Food & Kitchen",      emojis: ["🍞","🥛","🥚","🧃","🍳","🫖","☕","🍵","🧂","🫙"] },
+  { category: "Cleaning & Home",     emojis: ["🧹","🧺","🧻","🧼","🪣","🧽","🪴","🕯️","🪟","🚿"] },
+  { category: "Shopping & Supplies", emojis: ["🛍️","📦","🧴","🪥","💊","🩹","🔋","🕹️","🖨️","📱"] },
+  { category: "Drinks & Food",       emojis: ["💧","🧊","🍶","🧋","🥤","🍷","🍺","🫗","🍕","🥗"] },
+  { category: "Tools & Other",       emojis: ["🔧","🪛","🔑","🧲","💡","🔦","🪜","🗑️","📮","🎁"] },
+];
+
 const TOTAL_STEPS = 8;
 const inputClass  = "w-full px-4 py-3.5 rounded-xl border border-border bg-card text-foreground text-base font-medium focus:outline-none focus:border-primary transition-colors";
 const btnPrimary  = "w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-base shadow-sm hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none";
@@ -54,7 +62,7 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
 
   const [selectedSupplies, setSelectedSupplies] = useState<Supply[]>(SUGGESTED_SUPPLIES.slice(0, 3));
   const [customLabel,      setCustomLabel]       = useState("");
-  const [customEmoji,      setCustomEmoji]       = useState("");
+  const [customEmoji,      setCustomEmoji]       = useState("📦");
   const [showCustomForm,   setShowCustomForm]    = useState(false);
 
   const [cleaningEnabled,   setCleaningEnabled]   = useState(true);
@@ -327,20 +335,41 @@ const SetupWizard = ({ enterApp }: SetupWizardProps) => {
             ))}
 
             {showCustomForm ? (
-              <div className="flex flex-col gap-2 p-4 rounded-2xl bg-muted/40 border border-border">
+              <div className="flex flex-col gap-3 p-4 rounded-2xl bg-muted/40 border border-border">
                 <p className="text-sm font-bold text-foreground">Add your own item</p>
-                <div className="flex gap-2">
-                  <input className="w-16 px-3 py-2.5 rounded-xl border border-border bg-card text-center text-xl focus:outline-none focus:border-primary"
-                    placeholder="📦" value={customEmoji} onChange={e => setCustomEmoji(e.target.value)} maxLength={2} />
-                  <input className={`${inputClass} flex-1`} placeholder="e.g. Trash bags, Bread…"
-                    value={customLabel} onChange={e => setCustomLabel(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && addCustomSupply()} autoFocus />
+
+                {/* Emoji picker grid */}
+                <div className="overflow-x-auto">
+                  {EMOJI_PICKER.map(row => (
+                    <div key={row.category} className="flex gap-1.5 mb-1.5 flex-wrap">
+                      {row.emojis.map(em => (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => setCustomEmoji(em)}
+                          className="w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all duration-150 active:scale-90 shrink-0"
+                          style={{
+                            background: customEmoji === em ? "rgba(42,157,143,0.15)" : "transparent",
+                            border: customEmoji === em ? "2px solid #2a9d8f" : "2px solid transparent",
+                          }}
+                          aria-label={em}
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
                 </div>
+
+                <input className={`${inputClass}`} placeholder="e.g. Trash bags, Bread…"
+                  value={customLabel} onChange={e => setCustomLabel(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && addCustomSupply()} autoFocus />
+
                 <div className="flex gap-2">
-                  <button className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm active:scale-95 transition-all"
+                  <button className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none"
                     onClick={addCustomSupply} disabled={!customLabel.trim()}>Add item</button>
                   <button className="flex-1 py-2.5 rounded-xl bg-muted text-muted-foreground font-bold text-sm active:scale-95 transition-all"
-                    onClick={() => { setShowCustomForm(false); setCustomLabel(""); setCustomEmoji(""); }}>Cancel</button>
+                    onClick={() => { setShowCustomForm(false); setCustomLabel(""); setCustomEmoji("📦"); }}>Cancel</button>
                 </div>
               </div>
             ) : (
