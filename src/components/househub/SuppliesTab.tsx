@@ -1,15 +1,51 @@
 import { useState } from "react";
 import { Member, Purchase, Supply, SUPPLIES, fmtDate } from "@/lib/househub";
+import { CheckCircle2, ShoppingBag } from "lucide-react";
 
 interface SuppliesTabProps {
-  user:          Member | null;
-  members:       Member[];                    // full list for rotation display
-  doBuy:         (supply: Supply) => void;
-  purchases:     Purchase[];
-  getMember:     (id: string) => Member | undefined;
-  nextBuyer:     Member | null;
-  lastBoughtMap: Record<string, Purchase>;
+  user:            Member | null;
+  members:         Member[];
+  doBuy:           (supply: Supply) => void;
+  purchases:       Purchase[];
+  getMember:       (id: string) => Member | undefined;
+  nextBuyerByItem: Record<string, Member | null>;
+  lastBoughtMap:   Record<string, Purchase>;
 }
+
+// Celebration messages per supply item
+const SUPPLY_MESSAGES: Record<string, { emoji: string; msgs: string[] }> = {
+  "Water": {
+    emoji: "💧",
+    msgs: [
+      "Staying hydrated! Amazing!",
+      "Water secured! The house loves you!",
+      "No thirst on your watch! 🙌",
+    ],
+  },
+  "Gas":   {
+    emoji: "🔥",
+    msgs: [
+      "Cooking is back on! Legend!",
+      "Gas secured! Hot meals incoming!",
+      "You're literally keeping the house warm! ❤️",
+    ],
+  },
+  "Soap & Sponge": {
+    emoji: "🫧",
+    msgs: [
+      "Cleanliness champion right here!",
+      "Bubbles of appreciation for you!",
+      "The dishes thank you personally! 🍽️",
+    ],
+  },
+};
+
+const getRandMsg = (itemLabel: string) => {
+  const entry = SUPPLY_MESSAGES[itemLabel];
+  if (!entry) return { emoji: "🛒", msg: "Purchase saved! Thank you!" };
+  const msg = entry.msgs[Math.floor(Math.random() * entry.msgs.length)];
+  return { emoji: entry.emoji, msg };
+};
 
 const SuppliesTab = ({
   user,
@@ -17,120 +53,168 @@ const SuppliesTab = ({
   doBuy,
   purchases,
   getMember,
-  nextBuyer,
+  nextBuyerByItem,
   lastBoughtMap,
 }: SuppliesTabProps) => {
-  const [showForm,       setShowForm]       = useState(false);
-  const [selectedSupply, setSelectedSupply] = useState<string>("");
+  const [confirmingItem, setConfirmingItem]   = useState<string | null>(null);
+  const [celebrationMap, setCelebrationMap]   = useState<Record<string, { emoji: string; msg: string } | null>>({});
+  const [pressingItem,   setPressingItem]     = useState<string | null>(null);
 
-  const isMyTurn = nextBuyer?.id === user?.id;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSupply) return;
-    const supply = SUPPLIES.find(s => s.id === selectedSupply);
-    if (supply) {
+  const handleConfirm = (supply: Supply) => {
+    if (pressingItem) return;
+    setPressingItem(supply.id);
+    setTimeout(() => {
       doBuy(supply);
-      setShowForm(false);
-      setSelectedSupply("");
-    }
+      const { emoji, msg } = getRandMsg(supply.label);
+      setCelebrationMap(prev => ({ ...prev, [supply.id]: { emoji, msg } }));
+      setConfirmingItem(null);
+      setPressingItem(null);
+      setTimeout(() => {
+        setCelebrationMap(prev => ({ ...prev, [supply.id]: null }));
+      }, 4000);
+    }, 180);
   };
-
-  // ── Full rotation list ─────────────────────────────────────────────
-  // Starting from nextBuyer, wrap around the members array
-  const rotationList: Member[] = (() => {
-    if (!members.length || !nextBuyer) return members;
-    const startIdx = members.findIndex(m => m.id === nextBuyer.id);
-    if (startIdx === -1) return members;
-    return [...members.slice(startIdx), ...members.slice(0, startIdx)];
-  })();
 
   return (
     <div className="flex flex-col gap-6">
 
-      {/* SECTION 1 — Current Turn */}
+      {/* SECTION 1 — Per-item responsibility cards */}
       <section>
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
-          Current Turn
+          Next Buyer — Per Item
         </h3>
-        <div className={`rounded-xl border p-5 transition-all ${
-          isMyTurn ? "bg-accent/10 border-accent/30" : "bg-card shadow-sm"
-        }`}>
-          <p className="font-display font-black text-2xl text-foreground mb-1">
-            {nextBuyer?.name || "—"}
-          </p>
+        <div className="flex flex-col gap-3">
+          {SUPPLIES.map(s => {
+            const nextBuyer    = nextBuyerByItem[s.label];
+            const isMyTurn     = nextBuyer?.id === user?.id;
+            const isConfirming = confirmingItem === s.id;
+            const isPressing   = pressingItem   === s.id;
+            const celebration  = celebrationMap[s.id];
 
-          {isMyTurn && !showForm && (
-            <button
-              className="mt-4 w-full py-3 rounded-lg bg-accent text-accent-foreground font-bold shadow-sm hover:bg-accent/90 transition-colors"
-              onClick={() => setShowForm(true)}
-            >
-              I bought supplies
-            </button>
-          )}
-
-          {isMyTurn && showForm && (
-            <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
-              <select
-                className="w-full p-3 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:border-accent"
-                value={selectedSupply}
-                onChange={e => setSelectedSupply(e.target.value)}
-                required
+            return (
+              <div
+                key={s.id}
+                className={`rounded-2xl border p-4 transition-all duration-400 ${
+                  celebration
+                    ? "bg-emerald-50/60 border-emerald-200/70 shadow-md dark:bg-emerald-950/20 dark:border-emerald-800/30"
+                    : isMyTurn
+                    ? "bg-accent/10 border-accent/40 shadow-sm"
+                    : "bg-card border-border shadow-sm hover:shadow-md hover:border-border/80"
+                }`}
+                style={{ transition: "all 0.35s cubic-bezier(0.4,0,0.2,1)" }}
               >
-                <option value="" disabled>Select an item...</option>
-                {SUPPLIES.map(s => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
-                ))}
-              </select>
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-lg bg-accent text-accent-foreground font-bold text-sm"
-                >
-                  Submit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="flex-1 py-2.5 rounded-lg bg-muted text-muted-foreground font-bold text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl transition-transform duration-300 ${
+                        isMyTurn ? "scale-110" : ""
+                      }`}
+                      style={{ background: s.bg }}
+                    >
+                      {s.icon}
+                    </div>
+                    <div>
+                      <p className="font-bold text-foreground text-base leading-tight">{s.label}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Next:{" "}
+                        <span className={`font-semibold ${isMyTurn ? "text-accent" : "text-foreground"}`}>
+                          {nextBuyer?.name ?? "—"}
+                          {isMyTurn && " (You)"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Not your turn — show whose turn it is */}
-          {!isMyTurn && nextBuyer && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Waiting for <span className="font-semibold text-foreground">{nextBuyer.name}</span> to buy supplies.
-            </p>
-          )}
+                  {/* Action button — only shown if it's your turn and not celebrating */}
+                  {isMyTurn && !celebration && !isConfirming && (
+                    <button
+                      className="px-4 py-2 rounded-xl font-bold text-sm transition-all duration-200
+                        bg-accent text-accent-foreground
+                        hover:bg-accent/90 hover:shadow-md hover:-translate-y-0.5
+                        active:scale-95"
+                      onClick={() => setConfirmingItem(s.id)}
+                    >
+                      I bought it
+                    </button>
+                  )}
+
+                  {/* Checkmark when celebrating */}
+                  {celebration && (
+                    <CheckCircle2
+                      size={22}
+                      className="text-emerald-500 shrink-0"
+                      style={{ animation: "pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1)" }}
+                    />
+                  )}
+                </div>
+
+                {/* Confirm row */}
+                {isMyTurn && isConfirming && !celebration && (
+                  <div
+                    className="mt-3 flex gap-2"
+                    style={{ animation: "slide-up 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}
+                  >
+                    <button
+                      className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all duration-200
+                        bg-accent text-accent-foreground
+                        hover:bg-accent/90 active:scale-95
+                        ${isPressing ? "opacity-70 scale-95" : ""}
+                      `}
+                      onClick={() => handleConfirm(s)}
+                      disabled={!!isPressing}
+                    >
+                      {isPressing ? "Saving…" : `✓ Confirm ${s.label}`}
+                    </button>
+                    <button
+                      className="flex-1 py-2.5 rounded-xl bg-muted text-muted-foreground font-bold text-sm
+                        hover:bg-muted/80 active:scale-95 transition-all duration-200"
+                      onClick={() => setConfirmingItem(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {/* Celebration message */}
+                {celebration && (
+                  <div
+                    className="mt-3 flex items-center gap-2"
+                    style={{ animation: "slide-up 0.4s cubic-bezier(0.34,1.56,0.64,1)" }}
+                  >
+                    <span className="text-xl">{celebration.emoji}</span>
+                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      {celebration.msg}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* SECTION 2 — Last bought per supply item */}
+      {/* SECTION 2 — Last bought per item */}
       <section>
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
           Last Bought
         </h3>
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-          {SUPPLIES.map((s, i) => {
-            const last = lastBoughtMap[s.id];
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          {SUPPLIES.map(s => {
+            const last  = lastBoughtMap[s.id];
             const buyer = last ? getMember(last.member_id) : null;
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between px-5 py-3 border-b border-border/50 last:border-b-0"
+                className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors duration-200"
               >
-                <span className="text-foreground font-medium flex items-center gap-2">
-                  <span>{s.icon}</span>
+                <span className="flex items-center gap-2.5 font-medium text-foreground">
+                  <span className="text-lg">{s.icon}</span>
                   <span className="font-semibold">{s.label}</span>
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {buyer
                     ? `${buyer.name} — ${fmtDate(last!.date, { month: "short", day: "numeric" })}`
-                    : "—"}
+                    : <span className="italic">Not recorded</span>}
                 </span>
               </div>
             );
@@ -144,20 +228,22 @@ const SuppliesTab = ({
           Purchase History
         </h3>
         {purchases.length > 0 ? (
-          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            {purchases.slice(0, 8).map(p => {
-              const m = getMember(p.member_id);
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            {purchases.slice(0, 10).map((p, i) => {
+              const m    = getMember(p.member_id);
+              const sup  = SUPPLIES.find(s => s.label === p.item_name);
               return (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between px-5 py-3 border-b border-border/50 last:border-b-0"
+                  className="flex items-center justify-between px-5 py-3.5 border-b border-border/50 last:border-b-0 hover:bg-muted/30 transition-colors duration-200"
+                  style={{ animationDelay: `${i * 0.04}s` }}
                 >
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-foreground flex items-center gap-2">
+                    <span>{sup?.icon ?? "🛒"}</span>
                     <span className="font-bold">{m?.name ?? "—"}</span>
-                    <span className="text-muted-foreground mx-1">—</span>
-                    {p.item_name}
+                    <span className="text-muted-foreground">—</span>
+                    <span>{p.item_name}</span>
                   </span>
-                  {/* DB column is date, not purchase_date */}
                   <span className="text-xs text-muted-foreground">
                     {fmtDate(p.date, { month: "short", day: "numeric" })}
                   </span>
@@ -166,38 +252,60 @@ const SuppliesTab = ({
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No purchases recorded yet.</p>
+          <div className="rounded-2xl border border-dashed border-border bg-card/50 p-8 text-center">
+            <ShoppingBag size={32} className="mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-sm text-muted-foreground">No purchases recorded yet.</p>
+          </div>
         )}
       </section>
 
-      {/* SECTION 4 — Full rotation order */}
+      {/* SECTION 4 — Member rotation */}
       <section>
         <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">
-          Buying Rotation
+          Member Rotation
         </h3>
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-          {rotationList.map((m, i) => {
-            const isMe   = m.id === user?.id;
-            const isNext = m.id === nextBuyer?.id;
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+          {members.map((m, i) => {
+            const isMe       = m.id === user?.id;
+            const theirItems = SUPPLIES.filter(s => nextBuyerByItem[s.label]?.id === m.id);
             return (
               <div
                 key={m.id}
-                className="flex items-center gap-3 px-5 py-3 border-b border-border/50 last:border-b-0"
+                className={`flex items-center gap-3 px-5 py-3.5 border-b border-border/50 last:border-b-0 transition-colors duration-200 ${
+                  theirItems.length > 0 ? "bg-accent/5" : "hover:bg-muted/30"
+                }`}
               >
-                <span className="font-display font-bold text-muted-foreground w-5 shrink-0">
+                <span className="font-display font-bold text-muted-foreground w-5 shrink-0 text-sm">
                   {i + 1}.
                 </span>
-                <span className={`font-medium flex-1 ${isNext ? "text-accent font-bold" : "text-foreground"}`}>
-                  {m.name}
-                  {isMe   && <span className="ml-1.5 text-xs text-muted-foreground">(You)</span>}
-                  {isNext && <span className="ml-2 text-xs font-bold text-accent">← next</span>}
+                <span className="flex-1 font-medium text-foreground">
+                  <span className={isMe ? "text-primary font-bold" : ""}>{m.name}</span>
+                  {isMe && <span className="ml-1.5 text-xs text-muted-foreground">(You)</span>}
                 </span>
+                {theirItems.length > 0 && (
+                  <span className="flex gap-1 text-base">
+                    {theirItems.map(s => (
+                      <span key={s.id} title={s.label}>{s.icon}</span>
+                    ))}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
       </section>
 
+      <style>{`
+        @keyframes pop-in {
+          0%   { transform: scale(0); opacity: 0; }
+          70%  { transform: scale(1.25); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes slide-up {
+          0%   { transform: translateY(10px); opacity: 0; }
+          100% { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
