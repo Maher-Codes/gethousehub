@@ -102,7 +102,7 @@ const Dashboard = ({
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Join our house on HouseHub", text: message, url });
+        await navigator.share({ title: "Join our house on HouseHub", text: message });
         setShared(true);
         setTimeout(() => setShared(false), 2500);
       } catch {

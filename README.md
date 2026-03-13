@@ -1,33 +1,64 @@
 # HouseHub
 
-HouseHub is a web application designed to help people who live together manage shared responsibilities in an organized and transparent way.
+An app that organizes shared homes by keeping track of who cleans and who buys shared supplies, ensuring everything stays fair and clear.
 
-In shared houses, tasks like cleaning or buying essential supplies are often managed manually, which can create confusion about who did what and when.
+## What is HouseHub?
+Shared houses struggle with tracking who cleans and who buys shared supplies — it gets unfair and unclear. HouseHub solves this by automatically rotating responsibilities and keeping a clear history of exactly who has done what.
 
-HouseHub provides a simple digital system that helps house members track responsibilities such as cleaning schedules and shared supply purchases.
+## Live App
+https://gethousehub.vercel.app
 
-## Overview
-HouseHub aims to simplify the management of shared households. By digitizing chore rotations and supply tracking, it reduces friction between housemates and ensures a fair distribution of work and expenses.
+## How it works
+1. One person creates the house and gets a 6-digit code.
+2. They share the code with housemates.
+3. Everyone joins using the code.
+4. The app tracks the cleaning rotation and supply purchases automatically.
+5. Everyone always knows whose turn it is.
 
 ## Features
-* Create a house and generate a 6-digit house code
-* Join an existing house using the house code
-* Manage house members
-* Weekly cleaning schedule rotation (Saturday)
-* Track shared supplies like gas, water, soap, and sponge
-* See who bought each item last
+- Custom house name
+- Up to 20 members
+- Flexible supply items (choose from suggestions or add your own)
+- Optional cleaning schedule (weekly/biweekly/monthly, any day of the week)
+- Per-item supply rotation with next buyer always visible
+- One-tap logging with 5-second undo
+- Real-time sync across all devices
+- Full history per member
+- Session persistence (refresh stays on dashboard)
+- Native share sheet with pre-written invite message
+- No accounts or passwords needed — just a 6-digit code
 
-## Technology Stack
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* Supabase
+## Tech Stack
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- Supabase (PostgreSQL + Realtime + RLS)
 
-## Installation
-To run the project locally, use the following commands:
+## Database Schema
+- **houses:** Stores house name and the unique 6-digit code.
+- **members:** Stores member names associated with a house.
+- **clean_records:** History logs of completed cleaning tasks.
+- **purchases:** History logs of supply purchases.
+- **supply_responsibilities:** Tracks who is assigned to buy which item next.
+- **house_settings:** Stores house configuration like active supplies and cleaning rules.
 
+## Local Development
 ```bash
 npm install
 npm run dev
 ```
+
+## Environment Variables
+A `.env` file is required in the root directory with the following variables:
+- `VITE_SUPABASE_URL`: Your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY`: Your Supabase anon key
+
+## Project Structure
+- `src/components/househub/`: Core UI components (Dashboard, Tabs, Wizard, etc.)
+- `src/services/`: Supabase database logic and API calls
+- `src/lib/`: Shared utilities, types, and logic (rotation algorithms, etc.)
+- `src/pages/`: Top-level page components (Index)
+
+---
+*Built for real shared houses. Simple, fair, organized living.*
